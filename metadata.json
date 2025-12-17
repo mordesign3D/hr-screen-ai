@@ -1,0 +1,5 @@
+{
+  "name": "CV filtrage AI",
+  "description": "An automated resume screening and qualification tool using Gemini to score candidates against job descriptions.",
+  "requestFramePermissions": []
+}
