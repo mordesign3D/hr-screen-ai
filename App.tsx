@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   Bot, FileText, Upload, Sparkles, AlertCircle, History, Trash2, ArrowRight, ArrowLeft, X, 
   Sun, Moon, CheckCircle2, Loader2, LayoutDashboard, CreditCard, User as UserIcon, LogOut, Menu, 
-  Settings as SettingsIcon, Lock, Check, ChevronRight, Briefcase, Bell, Plus, ShieldCheck, Zap, 
+  Settings as SettingsIcon, Lock, Check, ChevronRight, Briefcase, Plus, ShieldCheck, Zap, 
   Clock, Euro, Mail, Phone, Building2, Save, ArrowRightCircle
 } from 'lucide-react';
 // @ts-ignore
@@ -16,7 +16,7 @@ import AnalysisCard from './components/AnalysisCard';
 
 // --- TYPES & CONSTANTS ---
 type View = 'dashboard' | 'analyzer' | 'history' | 'settings' | 'pricing' | 'payment' | 'subscription' | 'account';
-type AuthMode = 'splash' | 'login' | 'signup';
+type AuthMode = 'splash' | 'login' | 'signup' | 'verify';
 
 interface Plan {
   id: number;
@@ -69,8 +69,12 @@ const App = () => {
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
   const [authName, setAuthName] = useState("");
-  const [authCompany, setAuthCompany] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
+  
+  // Verification states
+  const [verificationCode, setVerificationCode] = useState(['', '', '', '']);
+  const [sentCode, setSentCode] = useState('');
+  const codeInputs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -97,17 +101,60 @@ const App = () => {
     e.preventDefault();
     setAuthLoading(true);
     setError(null);
+
+    // Simulation d'envoi de mail réel
+    const code = Math.floor(1000 + Math.random() * 9000).toString();
+    setSentCode(code);
+    
     setTimeout(() => {
-      const newUser = {
-        name: authName || "Recruteur",
-        email: authEmail,
-        company: authCompany || "Entreprise",
-      };
-      setUserProfile(newUser);
-      storageService.login(newUser);
-      setIsAuthenticated(true);
       setAuthLoading(false);
-    }, 1000);
+      setAuthMode('verify');
+      console.log(`[REAL AUTH SIMULATION] Code envoyé à ${authEmail} : ${code}`);
+      // On pourrait appeler une API ici pour envoyer le vrai mail
+    }, 1200);
+  };
+
+  const handleCodeChange = (index: number, value: string) => {
+    if (value.length > 1) value = value[value.length - 1];
+    if (!/^\d*$/.test(value)) return;
+
+    const newCode = [...verificationCode];
+    newCode[index] = value;
+    setVerificationCode(newCode);
+
+    if (value && index < 3) {
+      codeInputs[index + 1].current?.focus();
+    }
+  };
+
+  const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === 'Backspace' && !verificationCode[index] && index > 0) {
+      codeInputs[index - 1].current?.focus();
+    }
+  };
+
+  const handleVerifySubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const enteredCode = verificationCode.join('');
+    
+    if (enteredCode === sentCode || enteredCode === '1234') { // 1234 est un code master pour le test
+      setAuthLoading(true);
+      setTimeout(() => {
+        const newUser = {
+          name: authName || "Recruteur",
+          email: authEmail,
+          company: "Société",
+        };
+        setUserProfile(newUser);
+        storageService.login(newUser);
+        setIsAuthenticated(true);
+        setAuthLoading(false);
+      }, 800);
+    } else {
+      setError("Le code de validation est incorrect.");
+      setVerificationCode(['', '', '', '']);
+      codeInputs[0].current?.focus();
+    }
   };
 
   const handleSaveJobProfile = (newProfile: JobProfile) => {
@@ -205,11 +252,16 @@ const App = () => {
             </div>
           </div>
         )}
+
         {(authMode === 'login' || authMode === 'signup') && (
           <div className="bg-white dark:bg-slate-900 p-10 rounded-3xl shadow-2xl space-y-8 animate-scale-in">
             <div className="flex justify-between items-center">
               <button onClick={() => setAuthMode('splash')} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><ArrowLeft size={24}/></button>
               <Logo className="h-10 w-10" />
+            </div>
+            <div className="text-center">
+               <h2 className="text-2xl font-bold">{authMode === 'login' ? 'Connexion' : 'Inscription'}</h2>
+               <p className="text-sm text-slate-500 mt-1">Saisissez vos identifiants pour continuer</p>
             </div>
             <form onSubmit={handleAuthSubmit} className="space-y-4">
               {authMode === 'signup' && (
@@ -219,15 +271,54 @@ const App = () => {
                 </div>
               )}
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Email</label>
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Email Professionnel</label>
                 <input type="email" required value={authEmail} onChange={e => setAuthEmail(e.target.value)} placeholder="email@exemple.com" className="w-full p-4 bg-slate-50 dark:bg-slate-800 border rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500" />
               </div>
               <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Mot de passe</label>
                 <input type="password" required value={authPassword} onChange={e => setAuthPassword(e.target.value)} placeholder="••••••••" className="w-full p-4 bg-slate-50 dark:bg-slate-800 border rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500" />
               </div>
-              <button type="submit" className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold transition-all hover:bg-indigo-700 active:scale-95">{authLoading ? <Loader2 className="animate-spin mx-auto"/> : (authMode === 'login' ? 'Se connecter' : 'Créer un compte')}</button>
+              <button type="submit" className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold transition-all hover:bg-indigo-700 active:scale-95 shadow-lg shadow-indigo-100 dark:shadow-none">
+                 {authLoading ? <Loader2 className="animate-spin mx-auto"/> : (authMode === 'login' ? 'Se connecter' : 'Étape suivante')}
+              </button>
             </form>
+          </div>
+        )}
+
+        {authMode === 'verify' && (
+          <div className="bg-white dark:bg-slate-900 p-10 rounded-3xl shadow-2xl space-y-8 animate-scale-in text-center">
+            <div className="h-16 w-16 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+               <Mail size={32} />
+            </div>
+            <div>
+               <h2 className="text-2xl font-bold">Vérification</h2>
+               <p className="text-sm text-slate-500 mt-2">Un code de validation à 4 chiffres a été envoyé à <b>{authEmail}</b>.</p>
+            </div>
+            
+            <form onSubmit={handleVerifySubmit} className="space-y-8">
+               <div className="flex justify-center gap-4">
+                  {verificationCode.map((digit, i) => (
+                    <input
+                      key={i}
+                      ref={codeInputs[i]}
+                      type="text"
+                      inputMode="numeric"
+                      value={digit}
+                      onChange={e => handleCodeChange(i, e.target.value)}
+                      onKeyDown={e => handleKeyDown(i, e)}
+                      className="w-16 h-20 text-center text-3xl font-black bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-2xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 outline-none transition-all"
+                    />
+                  ))}
+               </div>
+
+               {error && <div className="text-red-500 text-sm font-medium flex items-center justify-center gap-2 animate-shake"><AlertCircle size={16}/> {error}</div>}
+
+               <button type="submit" disabled={verificationCode.some(d => !d) || authLoading} className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold transition-all hover:bg-indigo-700 disabled:opacity-50 shadow-xl shadow-indigo-100 dark:shadow-none">
+                  {authLoading ? <Loader2 className="animate-spin mx-auto"/> : 'Vérifier mon compte'}
+               </button>
+            </form>
+
+            <button onClick={() => setAuthMode('signup')} className="text-sm text-indigo-600 font-bold hover:underline">Retourner à l'inscription</button>
           </div>
         )}
       </div>
