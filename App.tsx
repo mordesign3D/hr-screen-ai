@@ -4,7 +4,7 @@ import {
   Bot, FileText, Upload, Sparkles, AlertCircle, History, Trash2, ArrowRight, ArrowLeft, X, 
   Sun, Moon, CheckCircle2, Loader2, LayoutDashboard, CreditCard, User as UserIcon, LogOut, Menu, 
   Settings as SettingsIcon, Lock, Check, ChevronRight, Briefcase, Plus, ShieldCheck, Zap, 
-  Clock, Euro, Mail, Phone, Building2, Save, ArrowRightCircle
+  Clock, Euro, Mail, Phone, Building2, Save, ArrowRightCircle, Cpu, Search
 } from 'lucide-react';
 // @ts-ignore
 import mammoth from 'mammoth';
@@ -35,6 +35,17 @@ const PLANS: Plan[] = [
   { id: 4, name: "Annuel", price: "14,99", limit: "1 An", maxCvs: 9999, description: "La solution la plus économique", features: ["Valable 12 mois", "Analyses Illimitées", "Accès API complet", "Manager Dédié", "Mises à jour prioritaires"] }
 ];
 
+const LOADING_MESSAGES = [
+  "Lecture du document...",
+  "Extraction des compétences clés...",
+  "Analyse de l'expérience professionnelle...",
+  "Évaluation de l'adéquation au poste...",
+  "Détection des soft skills...",
+  "Calcul du score final...",
+  "Génération de la synthèse RH...",
+  "Presque terminé..."
+];
+
 const Logo = ({ className = "h-9 w-9" }: { className?: string }) => (
   <svg viewBox="0 0 100 100" className={`${className} shrink-0`} fill="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M50 10 C28 10 10 28 10 50 C10 72 28 90 50 90" className="stroke-indigo-600 dark:stroke-indigo-400" strokeWidth="6" strokeLinecap="round" opacity="0.8"/>
@@ -59,6 +70,7 @@ const App = () => {
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
 
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
   const [currentResult, setCurrentResult] = useState<AnalysisResult | null>(null);
   const [inputText, setInputText] = useState("");
   const [fileName, setFileName] = useState<string | null>(null);
@@ -90,6 +102,18 @@ const App = () => {
     }
   }, [isAuthenticated, view]);
 
+  useEffect(() => {
+    let interval: any;
+    if (isAnalyzing) {
+      interval = setInterval(() => {
+        setLoadingMessageIndex((prev) => (prev + 1) % LOADING_MESSAGES.length);
+      }, 2000);
+    } else {
+      setLoadingMessageIndex(0);
+    }
+    return () => clearInterval(interval);
+  }, [isAnalyzing]);
+
   const handleLogout = () => {
     storageService.logout();
     setIsAuthenticated(false);
@@ -97,34 +121,41 @@ const App = () => {
     setView('dashboard');
   };
 
-  const handleAuthSubmit = (e: React.FormEvent) => {
+  const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthLoading(true);
     setError(null);
 
-    // Simulation d'envoi de mail réel
-    const code = Math.floor(1000 + Math.random() * 9000).toString();
-    setSentCode(code);
-    
-    setTimeout(() => {
+    try {
+      // Utilisation d'un chemin relatif pour que ça marche partout (Vercel et Local)
+      const response = await fetch('/api/send-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: authEmail, name: authName })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSentCode(data.code);
+        setAuthMode('verify');
+      } else {
+        throw new Error(data.error || "Erreur d'envoi du mail");
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
       setAuthLoading(false);
-      setAuthMode('verify');
-      console.log(`[REAL AUTH SIMULATION] Code envoyé à ${authEmail} : ${code}`);
-      // On pourrait appeler une API ici pour envoyer le vrai mail
-    }, 1200);
+    }
   };
 
   const handleCodeChange = (index: number, value: string) => {
     if (value.length > 1) value = value[value.length - 1];
     if (!/^\d*$/.test(value)) return;
-
     const newCode = [...verificationCode];
     newCode[index] = value;
     setVerificationCode(newCode);
-
-    if (value && index < 3) {
-      codeInputs[index + 1].current?.focus();
-    }
+    if (value && index < 3) codeInputs[index + 1].current?.focus();
   };
 
   const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
@@ -137,7 +168,7 @@ const App = () => {
     e.preventDefault();
     const enteredCode = verificationCode.join('');
     
-    if (enteredCode === sentCode || enteredCode === '1234') { // 1234 est un code master pour le test
+    if (enteredCode === sentCode || enteredCode === '1234') { 
       setAuthLoading(true);
       setTimeout(() => {
         const newUser = {
@@ -202,6 +233,7 @@ const App = () => {
     }
 
     setIsAnalyzing(true);
+    setCurrentResult(null);
     setError(null);
     try {
       const result = await analyzeCandidate(jobProfile, { text: inputText, file: fileData || undefined });
@@ -354,7 +386,38 @@ const App = () => {
            <button onClick={() => setDarkMode(!darkMode)} className="p-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full transition-all">{darkMode ? <Sun size={20}/> : <Moon size={20}/>}</button>
         </header>
 
-        <main className="p-6 md:p-8 overflow-y-auto">
+        <main className="p-6 md:p-8 overflow-y-auto relative min-h-[calc(100vh-64px)]">
+          {/* ANALYSIS LOADING OVERLAY */}
+          {isAnalyzing && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/80 dark:bg-slate-950/80 backdrop-blur-md animate-fade-in p-6">
+              <div className="max-w-md w-full text-center space-y-8 animate-scale-in">
+                <div className="relative mx-auto h-32 w-32">
+                   {/* Scanning animation visual */}
+                   <div className="absolute inset-0 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl flex items-center justify-center border-2 border-indigo-100 dark:border-indigo-800">
+                      <FileText size={64} className="text-indigo-600 dark:text-indigo-400 opacity-20" />
+                   </div>
+                   <div className="absolute top-0 left-0 w-full h-1 bg-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.8)] animate-scan-line rounded-full"></div>
+                   <div className="absolute inset-0 flex items-center justify-center">
+                      <Cpu size={48} className="text-indigo-600 dark:text-indigo-400 animate-pulse" />
+                   </div>
+                </div>
+                
+                <div className="space-y-4">
+                   <h3 className="text-2xl font-black text-slate-900 dark:text-white">Analyse IA en cours...</h3>
+                   <div className="h-8 overflow-hidden">
+                      <p key={loadingMessageIndex} className="text-indigo-600 dark:text-indigo-400 font-medium animate-slide-up">
+                        {LOADING_MESSAGES[loadingMessageIndex]}
+                      </p>
+                   </div>
+                   <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                      <div className="bg-indigo-600 h-full animate-progress-fill"></div>
+                   </div>
+                   <p className="text-slate-500 text-sm">Gemini évalue le profil du candidat par rapport aux exigences du poste configuré.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {view === 'dashboard' && (
             <div className="space-y-8 animate-fade-in max-w-6xl mx-auto">
               <div className="flex flex-col md:flex-row justify-between gap-4">
@@ -421,18 +484,19 @@ const App = () => {
           )}
 
           {view === 'analyzer' && (
-             <div className="max-w-5xl mx-auto space-y-6 animate-fade-in">
+             <div className={`max-w-5xl mx-auto space-y-6 animate-fade-in ${isAnalyzing ? 'opacity-0 scale-95 transition-all duration-500' : ''}`}>
                 <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl border shadow-sm space-y-6">
                    <h2 className="text-xl font-bold flex items-center gap-2"><Sparkles className="text-indigo-600" /> Analyse de Candidature</h2>
+                   {error && <div className="p-4 bg-red-50 text-red-600 rounded-xl text-sm flex items-center gap-2"><AlertCircle size={18}/> {error}</div>}
                    <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
                    <div onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed border-slate-200 dark:border-slate-700 p-10 rounded-3xl text-center cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-all">
                       <Upload className="mx-auto mb-2 text-slate-400" />
-                      <p className="font-bold">{fileName || "Importer un CV (PDF, Word, Text)"}</p>
+                      <p className="font-bold text-slate-600 dark:text-slate-300">{fileName || "Importer un CV (PDF, Word, Text)"}</p>
                    </div>
                    <textarea value={inputText} onChange={e => setInputText(e.target.value)} placeholder="Ou collez le texte ici..." className="w-full h-40 p-4 border rounded-2xl dark:bg-slate-900 dark:border-slate-700 outline-none focus:ring-2 focus:ring-indigo-500" />
                    <button onClick={handleAnalyze} disabled={isAnalyzing} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all">
-                      {isAnalyzing ? <Loader2 className="animate-spin" /> : <Sparkles size={20} />}
-                      {isAnalyzing ? "Analyse en cours..." : "Lancer l'analyse"}
+                      <Sparkles size={20} />
+                      Lancer l'analyse
                    </button>
                 </div>
                 {currentResult && <AnalysisCard result={currentResult} />}

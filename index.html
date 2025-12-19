@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -7,7 +8,7 @@
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cGF0aCBkPSJNIDUwIDEwIEMgMjggMTAgMTAgMjggMTAgNTAgQyAxMCA3MiAyOCA5MCA1MCA5MCIgc3Ryb2tlPSIjNGY0NmU1IiBzdHJva2Utd2lkdGg9IjYiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjxjaXJjbGUgY3g9IjU1IiBjeT0iNTUiIHI9IjI4IiBmaWxsPSJ3aGl0ZSIgc3Ryb2tlPSIjMGYxNzJhIiBzdHJva2Utd2lkdGg9IjYiLz48bGluZSB4MT0iNzYiIHkxPSI3NiIgeDI9IjkyIiB5Mj0iOTIiIHN0cm9rZT0iIzBmMTcyYSIgc3Ryb2tlLXdpZHRoPSI4IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48cmVjdCB4PSI0NCIgeT0iNDIiIHdpZHRoPSIyMiIgaGVpZ2h0PSIyOCIgcng9IjMiIGZpbGw9IiNmMWY1ZjkiIHN0cm9rZT0iIzk0YTNQOCIgc3Ryb2tlLXdpZHRoPSIyIi8+PHBhdGggZD0iTSA0OSA1NiBMIDUzIDYwIEwgNjEgNDgiIHN0cm9rZT0iIzEwYjk4MSIgc3Ryb2tlLXdpZHRoPSIzIiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48L3N2Zz4=" />
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Inter Font for Modern Web Look -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
       body {
         font-family: 'Inter', sans-serif;
@@ -73,6 +74,14 @@
               slideRight: {
                 '0%': { transform: 'translateX(-20px)', opacity: '0' },
                 '100%': { transform: 'translateX(0)', opacity: '1' },
+              },
+              scanLine: {
+                '0%': { top: '0%' },
+                '100%': { top: '100%' }
+              },
+              progressFill: {
+                '0%': { width: '0%' },
+                '100%': { width: '100%' }
               }
             },
             animation: {
@@ -80,6 +89,8 @@
               'slide-up': 'slideUp 0.5s ease-out',
               'scale-in': 'scaleIn 0.3s ease-out',
               'slide-right': 'slideRight 0.4s ease-out',
+              'scan-line': 'scanLine 2.5s infinite linear',
+              'progress-fill': 'progressFill 15s linear infinite'
             }
           }
         }
@@ -104,7 +115,8 @@
     "vite": "https://esm.sh/vite@^7.3.0",
     "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
     "firebase/": "https://esm.sh/firebase@^12.7.0/",
-    "url": "https://esm.sh/url@^0.11.4"
+    "url": "https://esm.sh/url@^0.11.4",
+    "resend": "https://esm.sh/resend@^6.6.0"
   }
 }
 </script>

@@ -6,6 +6,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "server": "node server.js",
+    "start": "concurrently \"npm run server\" \"npm run dev\"",
     "build": "vite build",
     "preview": "vite preview"
   },
@@ -16,7 +18,12 @@
     "lucide-react": "^0.556.0",
     "mammoth": "1.6.0",
     "jspdf": "2.5.1",
-    "firebase": "^10.8.0"
+    "firebase": "^10.8.0",
+    "resend": "^4.1.2",
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "concurrently": "^8.2.2"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
