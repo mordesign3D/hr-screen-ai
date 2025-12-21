@@ -1,3 +1,4 @@
+
 export interface JobProfile {
   title: string;
   minExperience: number;
