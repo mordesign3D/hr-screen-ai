@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { AnalysisResult } from '../types';
 import { CheckCircle, XCircle, User, Briefcase, Award, Download, FileText } from 'lucide-react';
@@ -22,28 +23,25 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ result }) => {
       const margin = 20;
       let y = 20;
 
-      // Header
       doc.setFontSize(18);
-      doc.setTextColor(79, 70, 229); // Indigo
-      doc.text("Rapport d'analyse - HR Screen AI", margin, y);
+      doc.setTextColor(79, 70, 229);
+      doc.text("Rapport d'analyse détaillé - HR Screen AI", margin, y);
       y += 15;
 
-      // Candidate Info
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
       doc.text(`Candidat : ${result.candidateName}`, margin, y);
       y += 8;
-      doc.text(`Expérience : ${result.totalExperience}`, margin, y);
-      y += 8;
-      
-      // Score
-      doc.text(`Score : ${result.score}/10`, margin, y);
-      y += 15;
+      doc.text(`Score Global : ${result.score}/10`, margin, y);
+      y += 6;
+      doc.setFontSize(10);
+      doc.setTextColor(100, 116, 139);
+      doc.text(`Technique: ${result.technicalScore}/10 | Potentiel: ${result.potentialScore}/10 | Stabilité: ${result.stabilityScore}/10`, margin, y);
+      y += 12;
 
-      // Summary
       doc.setFontSize(14);
-      doc.setTextColor(50, 50, 50);
-      doc.text("Synthèse", margin, y);
+      doc.setTextColor(0, 0, 0);
+      doc.text("Synthèse et Signaux", margin, y);
       y += 8;
       
       doc.setFontSize(11);
@@ -52,81 +50,45 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ result }) => {
       doc.text(splitSummary, margin, y);
       y += (splitSummary.length * 6) + 15;
 
-      // Matched Skills
-      doc.setFontSize(14);
-      doc.setTextColor(22, 163, 74); // Green
-      doc.text("Compétences Validées", margin, y);
-      y += 8;
-
-      doc.setFontSize(11);
-      doc.setTextColor(0, 0, 0);
-      const matched = result.matchedSkills.length > 0 ? result.matchedSkills.join(", ") : "Aucune";
-      const splitMatched = doc.splitTextToSize(matched, pageWidth - (margin * 2));
-      doc.text(splitMatched, margin, y);
-      y += (splitMatched.length * 6) + 15;
-
-      // Missing Skills
-      doc.setFontSize(14);
-      doc.setTextColor(220, 38, 38); // Red
-      doc.text("Compétences Manquantes", margin, y);
-      y += 8;
-
-      doc.setFontSize(11);
-      doc.setTextColor(0, 0, 0);
-      const missing = result.missingSkills.length > 0 ? result.missingSkills.join(", ") : "Aucune";
-      const splitMissing = doc.splitTextToSize(missing, pageWidth - (margin * 2));
-      doc.text(splitMissing, margin, y);
-      y += (splitMissing.length * 6) + 15;
-
-      // Soft Skills
-      if (result.softSkillsDetected.length > 0) {
-         doc.setFontSize(14);
-         doc.setTextColor(79, 70, 229); // Indigo
-         doc.text("Soft Skills", margin, y);
-         y += 8;
-   
-         doc.setFontSize(11);
-         doc.setTextColor(0, 0, 0);
-         const soft = result.softSkillsDetected.join(", ");
-         const splitSoft = doc.splitTextToSize(soft, pageWidth - (margin * 2));
-         doc.text(splitSoft, margin, y);
+      if (result.weakSignals && result.weakSignals.length > 0) {
+        doc.setFontSize(14);
+        doc.setTextColor(234, 179, 8);
+        doc.text("Signaux Faibles Détectés", margin, y);
+        y += 8;
+        doc.setFontSize(11);
+        doc.setTextColor(0, 0, 0);
+        result.weakSignals.forEach(signal => {
+          doc.text(`• ${signal}`, margin + 5, y);
+          y += 6;
+        });
+        y += 10;
       }
 
       const filename = `Analyse_${result.candidateName.replace(/\s+/g, '_')}.pdf`;
       doc.save(filename);
     } catch (e) {
       console.error("PDF Export Error", e);
-      alert("Erreur lors de la génération du PDF");
     }
   };
 
   const handleExportCSV = () => {
     try {
-        const headers = ["Nom", "Expérience", "Score", "Synthèse", "Compétences Validées", "Compétences Manquantes", "Soft Skills"];
+        const headers = ["Nom", "Score Global", "Note Technique", "Note Potentiel", "Note Stabilité", "Synthèse"];
         const row = [
             result.candidateName,
-            result.totalExperience,
             result.score,
-            result.summary,
-            result.matchedSkills.join("; "),
-            result.missingSkills.join("; "),
-            result.softSkillsDetected.join("; ")
+            result.technicalScore,
+            result.potentialScore,
+            result.stabilityScore,
+            result.summary
         ];
-        
-        const csvContent = "data:text/csv;charset=utf-8,\uFEFF" // Add BOM for Excel compatibility
-            + headers.join(",") + "\n" 
-            + row.map(e => `"${e.toString().replace(/"/g, '""')}"`).join(",");
-            
-        const encodedUri = encodeURI(csvContent);
+        const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + headers.join(",") + "\n" + row.map(e => `"${e.toString().replace(/"/g, '""')}"`).join(",");
         const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `analyse_${result.candidateName.replace(/\s+/g, '_')}.csv`);
-        document.body.appendChild(link);
+        link.setAttribute("href", encodeURI(csvContent));
+        link.setAttribute("download", `analyse_detaillee_${result.candidateName.replace(/\s+/g, '_')}.csv`);
         link.click();
-        document.body.removeChild(link);
     } catch (e) {
         console.error("CSV Export Error", e);
-        alert("Erreur lors de l'export CSV");
     }
   };
 
@@ -153,74 +115,50 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ result }) => {
         </div>
         
         <div className="flex justify-end gap-2 mt-2">
-            <button 
-                onClick={handleExportCSV}
-                className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors"
-                title="Exporter en CSV"
-            >
-                <FileText size={14} className="text-green-600" />
-                CSV
+            <button onClick={handleExportCSV} className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors">
+                <FileText size={14} className="text-green-600" /> CSV
             </button>
-            <button 
-                onClick={handleExportPDF}
-                className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors"
-                title="Télécharger en PDF"
-            >
-                <Download size={14} className="text-red-500" />
-                PDF
+            <button onClick={handleExportPDF} className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors">
+                <Download size={14} className="text-red-500" /> PDF
             </button>
         </div>
       </div>
 
       <div className="p-6 space-y-6">
-        {/* Summary */}
         <div className={`p-4 rounded-lg border ${getScoreColor(result.score)}`}>
-            <h3 className="text-sm font-semibold mb-1 opacity-80 uppercase tracking-wider dark:text-slate-200">Synthèse de l'IA</h3>
-            <p className="text-sm font-medium leading-relaxed dark:text-slate-300">{result.summary}</p>
+            <h3 className="text-sm font-semibold mb-1 opacity-80 uppercase tracking-wider dark:text-slate-200">Synthèse et Scores Détaillés</h3>
+            <p className="text-sm font-medium leading-relaxed dark:text-slate-300 whitespace-pre-line">{result.summary}</p>
         </div>
 
-        {/* Skills Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Matched Skills */}
           <div>
             <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
               <CheckCircle size={16} className="text-green-500 dark:text-green-400" />
               Compétences Validées
             </h3>
             <div className="flex flex-wrap gap-2">
-              {result.matchedSkills && result.matchedSkills.length > 0 ? (
-                result.matchedSkills.map((skill, i) => (
-                  <span key={i} className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs rounded-md font-medium border border-green-200 dark:border-green-800">
-                    {skill}
-                  </span>
-                ))
-              ) : (
-                <span className="text-xs text-slate-400 italic">Aucune compétence majeure détectée</span>
-              )}
+              {result.matchedSkills?.map((skill, i) => (
+                <span key={i} className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs rounded-md font-medium border border-green-200 dark:border-green-800">
+                  {skill}
+                </span>
+              ))}
             </div>
           </div>
-
-          {/* Missing Skills */}
           <div>
             <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
               <XCircle size={16} className="text-red-500 dark:text-red-400" />
               Compétences Manquantes
             </h3>
             <div className="flex flex-wrap gap-2">
-              {result.missingSkills && result.missingSkills.length > 0 ? (
-                result.missingSkills.map((skill, i) => (
-                  <span key={i} className="px-2 py-1 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs rounded-md font-medium border border-red-100 dark:border-red-900">
-                    {skill}
-                  </span>
-                ))
-              ) : (
-                <span className="text-xs text-slate-400 italic">Aucune lacune majeure</span>
-              )}
+              {result.missingSkills?.map((skill, i) => (
+                <span key={i} className="px-2 py-1 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs rounded-md font-medium border border-red-100 dark:border-red-900">
+                  {skill}
+                </span>
+              ))}
             </div>
           </div>
         </div>
 
-        {/* Soft Skills */}
         {result.softSkillsDetected && result.softSkillsDetected.length > 0 && (
           <div>
             <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">

@@ -11,12 +11,16 @@ export interface JobProfile {
 
 export interface AnalysisResult {
   candidateName: string;
-  totalExperience: string; // String to allow "5 years" or "5 ans"
-  score: number;
+  totalExperience: string;
+  score: number; // Score global (moyenne pondérée)
+  technicalScore: number; // Adéquation technique /10
+  potentialScore: number; // Potentiel d'évolution /10
+  stabilityScore: number; // Stabilité /10
   summary: string;
   matchedSkills: string[];
   missingSkills: string[];
   softSkillsDetected: string[];
+  weakSignals?: string[];
 }
 
 export interface AnalysisHistoryItem extends AnalysisResult {
