@@ -4,7 +4,6 @@ import { DEFAULT_JOB_PROFILE } from '../constants';
 
 const KEYS = {
   USER: 'hr_app_user',
-  AUTH_TOKEN: 'hr_app_token',
   JOB_PROFILE: 'hr_app_job_profile',
   PLAN: 'hr_app_plan',
   LOCAL_HISTORY: 'hr_app_history'
@@ -17,27 +16,21 @@ export interface UserProfile {
   phone?: string;
 }
 
+const DEFAULT_USER: UserProfile = {
+  name: "Recruteur",
+  email: "contact@entreprise.com",
+  company: "Ma Société"
+};
+
 export const storageService = {
-  // Désactivation des indicateurs Cloud
   isCloudSyncActive: () => false,
 
-  isAuthenticated: (): boolean => !!localStorage.getItem(KEYS.AUTH_TOKEN),
+  // Always true now that login is removed
+  isAuthenticated: (): boolean => true,
 
-  login: (user: UserProfile) => {
-    const token = 'tk_' + Math.random().toString(36).substr(2);
-    localStorage.setItem(KEYS.AUTH_TOKEN, token);
-    localStorage.setItem(KEYS.USER, JSON.stringify(user));
-    return token;
-  },
-
-  logout: () => {
-    localStorage.removeItem(KEYS.AUTH_TOKEN);
-    // On garde les données pour la prochaine session locale ou on peut choisir de les vider
-  },
-
-  getUser: (): UserProfile | null => {
+  getUser: (): UserProfile => {
     const data = localStorage.getItem(KEYS.USER);
-    return data ? JSON.parse(data) : null;
+    return data ? JSON.parse(data) : DEFAULT_USER;
   },
 
   updateUser: (user: UserProfile) => {

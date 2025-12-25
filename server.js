@@ -15,8 +15,8 @@ app.use(express.json({ limit: '10mb' }));
 
 // Initialisation des services
 const resend = new Resend(process.env.RESEND_API_KEY);
-// Utilisation de la clé standard Gemini
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || process.env.GEMINI_API_KEY });
+// Always use process.env.API_KEY exclusively as per GenAI client initialization rules
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 // Route pour envoyer le code de validation par email
 app.post('/api/send-code', async (req, res) => {

@@ -14,6 +14,7 @@ export const analyzeCandidate = async (
   jobProfile: JobProfile,
   input: AnalysisInput
 ): Promise<AnalysisResult> => {
+  // Use the API key directly from process.env.API_KEY as per initialization rules
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   const responseSchema = {
@@ -67,9 +68,10 @@ export const analyzeCandidate = async (
       parts.push({ text: `Contenu du CV :\n\n${input.text}\n\nApplique le scoring multi-critères.` });
     }
 
+    // Upgrade to gemini-3-pro-preview for complex reasoning task as per model selection rules
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: [{ role: "user", parts }],
+      model: "gemini-3-pro-preview",
+      contents: { parts },
       config: {
         systemInstruction,
         responseMimeType: "application/json",
@@ -78,11 +80,12 @@ export const analyzeCandidate = async (
       },
     });
 
+    // Directly access response.text property as per guidelines
     if (!response.text) {
       throw new Error("Gemini n'a pas retourné de résultat.");
     }
 
-    return JSON.parse(response.text) as AnalysisResult;
+    return JSON.parse(response.text.trim()) as AnalysisResult;
   } catch (error) {
     console.error("Gemini Analysis Error:", error);
     throw error;
