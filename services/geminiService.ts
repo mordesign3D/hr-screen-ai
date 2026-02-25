@@ -1,5 +1,5 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, ThinkingLevel } from "@google/genai";
 import { JobProfile, AnalysisResult } from "../types";
 
 export interface AnalysisInput {
@@ -68,15 +68,16 @@ export const analyzeCandidate = async (
       parts.push({ text: `Contenu du CV :\n\n${input.text}\n\nApplique le scoring multi-critères.` });
     }
 
-    // Upgrade to gemini-3-pro-preview for complex reasoning task as per model selection rules
+    // Use gemini-3-flash-preview for faster response times
     const response = await ai.models.generateContent({
-      model: "gemini-3-pro-preview",
+      model: "gemini-3-flash-preview",
       contents: { parts },
       config: {
         systemInstruction,
         responseMimeType: "application/json",
         responseSchema: responseSchema,
         temperature: 0.1,
+        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
       },
     });
 

@@ -63,7 +63,7 @@ export const storageService = {
 
   getPlanId: (): number => {
     const data = localStorage.getItem(KEYS.PLAN);
-    return data ? parseInt(data, 10) : 1;
+    return data ? parseInt(data, 10) : 0;
   },
 
   savePlanId: (planId: number) => {

@@ -1,41 +1,40 @@
 import { JobProfile } from "./types";
 
 export const DEFAULT_JOB_PROFILE: JobProfile = {
-  title: "Développeur Full-Stack Senior",
-  minExperience: 5,
-  educationLevel: "Bac+5 / Master",
-  fieldOfStudy: "Informatique",
-  languages: ["Français", "Anglais Technique"],
-  requiredSkills: ["Python", "Django", "Flask", "SQL", "React", "TypeScript"],
-  softSkills: ["Travail d'équipe", "Autonomie", "Communication", "Leadership"]
+  title: "Développeur Full-Stack",
+  minExperience: 3,
+  educationLevel: "Bac+5 (Master, Ingénieur)",
+  fieldOfStudy: "Informatique / Génie Logiciel",
+  languages: ["Français", "Anglais"],
+  requiredSkills: ["React", "Node.js", "TypeScript", "PostgreSQL", "Docker"],
+  softSkills: ["Esprit d'équipe", "Autonomie", "Rigueur", "Adaptabilité"]
 };
 
-export const MOCK_CV_TEXT = `Jean Dupont
-Paris, France | jean.dupont@email.com
+export const MOCK_CV_TEXT = `Moussa Ndiaye
+Dakar, Sénégal | moussa.ndiaye@email.sn
 
 PROFIL
-Développeur Full-Stack passionné avec 6 ans d'expérience dans la création d'applications web robustes. Expert en Python et JavaScript.
+Développeur Full-Stack avec 4 ans d'expérience dans la conception d'applications web performantes. Passionné par les technologies modernes et l'innovation digitale au Sénégal.
 
 EXPÉRIENCE PROFESSIONNELLE
 
-Senior Backend Developer | TechCorp (2020 - Présent)
-- Développement d'API REST avec Django et Django Rest Framework.
-- Optimisation des requêtes SQL (PostgreSQL) réduisant le temps de chargement de 40%.
-- Mentoring de 3 développeurs juniors.
-- Mise en place de pipelines CI/CD.
+Développeur Senior | SN Tech Solutions (2021 - Présent)
+- Conception et déploiement d'une plateforme de e-commerce locale.
+- Optimisation des performances backend avec Node.js et Redis.
+- Lead technique sur une équipe de 4 développeurs.
 
-Développeur Web | WebAgency (2017 - 2020)
-- Création de sites e-commerce avec Flask et Vue.js.
-- Gestion de bases de données MySQL.
-- Collaboration étroite avec les designers et les chefs de projet.
+Développeur Web | Dakar Digital Agency (2018 - 2021)
+- Développement d'interfaces utilisateur réactives avec React.
+- Intégration de solutions de paiement locales (Wave, Orange Money).
+- Maintenance évolutive de plusieurs applications métiers.
 
 COMPÉTENCES TECHNIQUES
-- Langages: Python, JavaScript, TypeScript, SQL
-- Frameworks: Django, Flask, React, Vue.js
-- Outils: Docker, Git, AWS
+- Langages: JavaScript, TypeScript, PHP, SQL
+- Frameworks: React, Next.js, Express, Laravel
+- Outils: Git, Docker, AWS, Firebase
 
 FORMATION
-Master Informatique - Université de Paris (2017)
+Master en Informatique - ESP Dakar (2018)
 
 LANGUES
-Français (Natif), Anglais (Courant)`;
+Français (Natif), Wolof (Natif), Anglais (Professionnel)`;

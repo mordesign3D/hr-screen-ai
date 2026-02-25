@@ -28,21 +28,21 @@ app.post('/api/send-code', async (req, res) => {
 
   try {
     const { data, error } = await resend.emails.send({
-      from: 'HR Screen AI <onboarding@resend.dev>',
+      from: 'CV SCREEN AI <onboarding@resend.dev>',
       to: [email],
-      subject: 'Votre code de validation - HR Screen AI',
+      subject: 'Votre code de validation - CV SCREEN AI',
       html: `
         <div style="font-family: sans-serif; padding: 40px; color: #334155; background-color: #f8fafc;">
           <div style="max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
             <h2 style="color: #4f46e5; text-align: center; font-size: 24px;">Validation de votre compte</h2>
             <p>Bonjour <strong>${name || 'Recruteur'}</strong>,</p>
-            <p>Merci d'utiliser HR Screen AI. Voici votre code de validation sécurisé :</p>
+            <p>Merci d'utiliser CV SCREEN AI. Voici votre code de validation sécurisé :</p>
             <div style="background: #eef2ff; padding: 30px; border-radius: 16px; text-align: center; font-size: 42px; font-weight: 900; letter-spacing: 8px; color: #4338ca; margin: 30px 0; border: 2px dashed #c7d2fe;">
               ${code}
             </div>
             <p style="font-size: 14px; color: #64748b; text-align: center;">Ce code expirera dans 10 minutes.</p>
             <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 30px 0;" />
-            <p style="font-size: 12px; color: #94a3b8; text-align: center;">© 2025 HR Screen AI. Technologie Propulsée par Gemini.</p>
+            <p style="font-size: 12px; color: #94a3b8; text-align: center;">© 2025 CV SCREEN AI. Technologie Propulsée par Gemini.</p>
           </div>
         </div>
       `,

@@ -24,8 +24,8 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ result }) => {
       let y = 20;
 
       doc.setFontSize(18);
-      doc.setTextColor(79, 70, 229);
-      doc.text("Rapport d'analyse détaillé - HR Screen AI", margin, y);
+      doc.setTextColor(0, 133, 63);
+      doc.text("Rapport d'analyse détaillé - CV SCREEN AI", margin, y);
       y += 15;
 
       doc.setFontSize(12);
@@ -162,12 +162,12 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ result }) => {
         {result.softSkillsDetected && result.softSkillsDetected.length > 0 && (
           <div>
             <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
-              <Award size={16} className="text-indigo-500 dark:text-indigo-400" />
+              <Award size={16} className="text-snYellow dark:text-snYellow" />
               Soft Skills Détectés
             </h3>
             <div className="flex flex-wrap gap-2">
               {result.softSkillsDetected.map((skill, i) => (
-                <span key={i} className="px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-xs rounded-full font-medium border border-indigo-100 dark:border-indigo-800">
+                <span key={i} className="px-2 py-1 bg-snYellow/10 dark:bg-snYellow/20 text-slate-700 dark:text-slate-200 text-xs rounded-full font-medium border border-snYellow/30 dark:border-snYellow/50">
                   {skill}
                 </span>
               ))}

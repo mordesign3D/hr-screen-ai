@@ -16,10 +16,10 @@ import AnalysisCard from './components/AnalysisCard';
 
 // --- CONSTANTS ---
 const PLANS = [
-  { id: 1, name: "Hebdomadaire", price: "0,99", limit: "7 Jours", maxCvs: 20, features: ["Valable 7 jours", "Analyse de 20 CVs", "Export PDF & CSV", "Support email"] },
-  { id: 2, name: "Mensuel", price: "2,99", limit: "1 Mois", maxCvs: 100, features: ["Valable 1 mois", "Analyse de 100 CVs", "Comparaison avancée", "Support prioritaire"] },
-  { id: 3, name: "Trimestriel", price: "6,99", limit: "3 Mois", maxCvs: 400, features: ["Valable 3 mois", "Analyse de 400 CVs", "Rapports détaillés", "Support prioritaire", "Exports illimités"] },
-  { id: 4, name: "Annuel", price: "14,99", limit: "1 An", maxCvs: 9999, features: ["Valable 12 mois", "Analyses Illimitées", "Accès API complet", "Manager Dédié"] }
+  { id: 1, name: "Découverte", price: "1 000", limit: "24 Heures", maxCvs: 100, maxBatchSize: 20, features: ["Valable 24h", "Analyse de 100 CVs", "20 CVs par analyse", "Export PDF & CSV"] },
+  { id: 2, name: "Essentiel", price: "3 500", limit: "1 Mois", maxCvs: 500, maxBatchSize: 50, features: ["Valable 1 mois", "Analyse de 500 CVs", "50 CVs par analyse", "Support prioritaire"] },
+  { id: 3, name: "Pro", price: "9 000", limit: "3 Mois", maxCvs: 2500, maxBatchSize: 100, features: ["Valable 3 mois", "Analyse de 2 500 CVs", "100 CVs par analyse", "Support prioritaire"] },
+  { id: 4, name: "Business", price: "25 000", limit: "1 An", maxCvs: 9999, maxBatchSize: 500, features: ["Valable 12 mois", "Analyses Illimitées", "500 CVs par analyse", "Manager Dédié"] }
 ];
 
 const LOADING_MESSAGES = [
@@ -34,11 +34,12 @@ const LOADING_MESSAGES = [
 ];
 
 const Logo = ({ className = "h-9 w-9" }: { className?: string }) => (
-  <svg viewBox="0 0 100 100" className={`${className} drop-shadow-[0_0_8px_rgba(20,184,166,0.4)]`} fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M50 10 C28 10 10 28 10 50 C10 72 28 90 50 90" className="stroke-accent" strokeWidth="6" strokeLinecap="round" opacity="0.8"/>
-    <circle cx="50" cy="10" r="4" className="fill-accent" />
-    <path d="M76 76 L92 92" className="stroke-white dark:stroke-white stroke-slate-800" strokeWidth="8" strokeLinecap="round" />
+  <svg viewBox="0 0 100 100" className={`${className} drop-shadow-[0_0_8px_rgba(0,133,63,0.4)]`} fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M50 10 C28 10 10 28 10 50 C10 72 28 90 50 90" className="stroke-snGreen" strokeWidth="6" strokeLinecap="round" opacity="0.8"/>
+    <circle cx="50" cy="10" r="4" className="fill-snYellow" />
+    <path d="M76 76 L92 92" className="stroke-snRed" strokeWidth="8" strokeLinecap="round" />
     <circle cx="55" cy="55" r="28" className="fill-white dark:fill-dark stroke-slate-800 dark:stroke-white" strokeWidth="6" />
+    <path d="M55 45 L55 65 M45 55 L65 55" className="stroke-snGreen" strokeWidth="4" strokeLinecap="round" />
   </svg>
 );
 
@@ -57,8 +58,10 @@ const App = () => {
   
   // Analyzer States
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
   const [currentResult, setCurrentResult] = useState<AnalysisResult | null>(null);
+  const [batchResults, setBatchResults] = useState<AnalysisResult[]>([]);
   const [inputText, setInputText] = useState("");
   const [pendingFiles, setPendingFiles] = useState<{name: string, input: AnalysisInput}[]>([]);
   const [analyzerError, setAnalyzerError] = useState<string | null>(null);
@@ -95,36 +98,54 @@ const App = () => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
     
+    const activePlan = PLANS.find(p => p.id === currentPlanId);
+    if (!activePlan) {
+      setAnalyzerError("Vous devez souscrire à un forfait pour utiliser cette fonctionnalité.");
+      setView('pricing');
+      return;
+    }
+
+    if (files.length > activePlan.maxBatchSize) {
+      setAnalyzerError(`Votre forfait actuel limite l'analyse à ${activePlan.maxBatchSize} CVs par session.`);
+      return;
+    }
+
+    setIsImporting(true);
     setAnalyzerError(null);
     setInputText("");
+    setBatchResults([]);
     const newPending: {name: string, input: AnalysisInput}[] = [];
 
-    // Cast Array.from result to File[] to fix 'unknown' type errors during processing
-    for (const file of Array.from(files) as File[]) {
-      try {
-        if (file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
-          const arrayBuffer = await file.arrayBuffer();
-          const result = await mammoth.extractRawText({ arrayBuffer });
-          newPending.push({ name: file.name, input: { text: result.value } });
-        } else if (file.type === "application/pdf" || file.type.startsWith("image/") || file.type === "text/plain") {
-          const reader = new FileReader();
-          const filePromise = new Promise<{name: string, input: AnalysisInput}>((resolve) => {
-            reader.onload = () => {
-              const base64 = (reader.result as string).split(',')[1];
-              resolve({ name: file.name, input: { file: { mimeType: file.type, data: base64 } } });
-            };
-            reader.readAsDataURL(file);
-          });
-          newPending.push(await filePromise);
-        } else {
-          const text = await file.text();
-          newPending.push({ name: file.name, input: { text } });
+    try {
+      // Cast Array.from result to File[] to fix 'unknown' type errors during processing
+      for (const file of Array.from(files) as File[]) {
+        try {
+          if (file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+            const arrayBuffer = await file.arrayBuffer();
+            const result = await mammoth.extractRawText({ arrayBuffer });
+            newPending.push({ name: file.name, input: { text: result.value } });
+          } else if (file.type === "application/pdf" || file.type.startsWith("image/") || file.type === "text/plain") {
+            const reader = new FileReader();
+            const filePromise = new Promise<{name: string, input: AnalysisInput}>((resolve) => {
+              reader.onload = () => {
+                const base64 = (reader.result as string).split(',')[1];
+                resolve({ name: file.name, input: { file: { mimeType: file.type, data: base64 } } });
+              };
+              reader.readAsDataURL(file);
+            });
+            newPending.push(await filePromise);
+          } else {
+            const text = await file.text();
+            newPending.push({ name: file.name, input: { text } });
+          }
+        } catch (err) {
+          console.error(`Error processing ${file.name}:`, err);
         }
-      } catch (err) {
-        console.error(`Error processing ${file.name}:`, err);
       }
+      setPendingFiles(newPending);
+    } finally {
+      setIsImporting(false);
     }
-    setPendingFiles(newPending);
   };
 
   const handleAnalyze = async () => {
@@ -138,7 +159,19 @@ const App = () => {
       return;
     }
     
-    const activePlan = PLANS.find(p => p.id === currentPlanId) || PLANS[0];
+    const activePlan = PLANS.find(p => p.id === currentPlanId);
+    
+    if (!activePlan) {
+      setAnalyzerError("Vous devez souscrire à un forfait pour utiliser cette fonctionnalité.");
+      setView('pricing');
+      return;
+    }
+
+    if (inputsToProcess.length > activePlan.maxBatchSize) {
+      setAnalyzerError(`Votre forfait actuel limite l'analyse à ${activePlan.maxBatchSize} CVs par session.`);
+      return;
+    }
+
     if (history.length + inputsToProcess.length > activePlan.maxCvs) {
       setAnalyzerError(`Limite atteinte (${activePlan.maxCvs} CVs).`);
       setView('pricing');
@@ -147,21 +180,36 @@ const App = () => {
 
     setIsAnalyzing(true);
     setCurrentResult(null);
+    setBatchResults([]);
     setAnalyzerError(null);
     setProcessingIndex(0);
 
     try {
-      let lastResult: AnalysisResult | null = null;
-      for (let i = 0; i < inputsToProcess.length; i++) {
-        setProcessingIndex(i);
-        const item = inputsToProcess[i];
-        const result = await analyzeCandidate(jobProfile, item.input);
-        const id = await storageService.saveAnalysis(result);
-        const newItem = { ...result, id, timestamp: Date.now() };
-        setHistory(prev => [newItem, ...prev]);
-        lastResult = newItem;
+      let completedCount = 0;
+      const analysisPromises = inputsToProcess.map(async (item) => {
+        try {
+          const result = await analyzeCandidate(jobProfile, item.input);
+          const id = await storageService.saveAnalysis(result);
+          const newItem = { ...result, id, timestamp: Date.now() };
+          setHistory(prev => [newItem, ...prev]);
+          completedCount++;
+          setProcessingIndex(completedCount);
+          return newItem;
+        } catch (err) {
+          console.error(`Error analyzing ${item.name}:`, err);
+          return null;
+        }
+      });
+
+      const results = (await Promise.all(analysisPromises)).filter(r => r !== null) as AnalysisResult[];
+      
+      // Sort results by score descending
+      const sortedResults = [...results].sort((a, b) => b.score - a.score);
+      setBatchResults(sortedResults);
+      if (sortedResults.length > 0) {
+        setCurrentResult(sortedResults[0]);
       }
-      setCurrentResult(lastResult);
+      
       setPendingFiles([]);
       setInputText("");
     } catch (err: any) {
@@ -189,8 +237,9 @@ const App = () => {
     </button>
   );
 
-  const activePlan = PLANS.find(p => p.id === currentPlanId) || PLANS[0];
-  const quotaReached = history.length >= activePlan.maxCvs;
+  const activePlan = PLANS.find(p => p.id === currentPlanId);
+  const quotaReached = activePlan ? history.length >= activePlan.maxCvs : true;
+  const hasActivePlan = !!activePlan;
 
   if (isLoading) return (
     <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-dark overflow-hidden transition-colors duration-500">
@@ -205,7 +254,7 @@ const App = () => {
       <div className="text-center space-y-4 max-w-xs animate-fade-in">
         <div className="flex items-center justify-center gap-3">
           <Logo className="h-10 w-10" />
-          <span className="font-black text-slate-800 dark:text-white text-2xl tracking-tighter uppercase">HR SCREEN AI</span>
+          <span className="font-black text-slate-800 dark:text-white text-2xl tracking-tighter uppercase">CV SCREEN AI</span>
         </div>
         <div className="w-48 h-1 bg-slate-200 dark:bg-white/10 rounded-full mx-auto overflow-hidden">
           <div className="h-full bg-accent animate-progress-loading glow-teal"></div>
@@ -219,14 +268,14 @@ const App = () => {
       {/* SIDEBAR */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-64 glass border-r border-slate-200 dark:border-white/5 transform transition-transform lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="p-8 border-b border-slate-200 dark:border-white/5 flex items-center gap-3">
-          <Logo /> <span className="font-black text-slate-800 dark:text-white text-xl tracking-tighter uppercase">HR SCREEN</span>
+          <Logo /> <span className="font-black text-slate-800 dark:text-white text-xl tracking-tighter uppercase">CV SCREEN AI</span>
         </div>
         <nav className="p-6 space-y-2">
           <SidebarItem icon={LayoutDashboard} label="Tableau de bord" targetView="dashboard" active={view === 'dashboard'} />
           <SidebarItem icon={Sparkles} label="Analyseur CV" targetView="analyzer" active={view === 'analyzer'} />
           <SidebarItem icon={History} label="Historique" targetView="history" active={view === 'history'} />
           <SidebarItem icon={SettingsIcon} label="Profil Poste" targetView="settings" active={view === 'settings'} />
-          <SidebarItem icon={Euro} label="Tarifs" targetView="pricing" active={view === 'pricing'} />
+          <SidebarItem icon={Smartphone} label="Tarifs" targetView="pricing" active={view === 'pricing'} />
           <SidebarItem icon={UserIcon} label="Profil" targetView="account" active={view === 'account'} />
         </nav>
         <div className="absolute bottom-6 w-full px-6">
@@ -245,7 +294,7 @@ const App = () => {
            </div>
            <div className="flex items-center gap-6">
               <div className="hidden sm:flex items-center gap-3 px-4 py-2 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-600 dark:text-slate-300">
-                 <Zap size={14} className="text-yellow-500" /> {history.length} / {activePlan.maxCvs} CVs
+                 <Zap size={14} className="text-yellow-500" /> {activePlan ? `${history.length} / ${activePlan.maxCvs} CVs` : "Aucun forfait actif"}
               </div>
               <button onClick={() => setDarkMode(!darkMode)} className="p-3 glass rounded-2xl text-accent transition-all hover:scale-110 border border-slate-200 dark:border-white/10 shadow-sm">
                 {darkMode ? <Sun size={20}/> : <Moon size={20}/>}
@@ -277,6 +326,11 @@ const App = () => {
                 <div className="space-y-2">
                   <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">Tableau de Bord</h1>
                   <p className="text-slate-500 font-bold">Bienvenue sur votre interface de recrutement prédictif.</p>
+                  {!hasActivePlan && (
+                    <div className="flex items-center gap-2 text-snRed text-xs font-black uppercase tracking-widest bg-snRed/10 px-4 py-2 rounded-full border border-snRed/20">
+                      <AlertCircle size={14} /> Forfait inactif - Souscription requise
+                    </div>
+                  )}
                 </div>
                 <button onClick={() => setView('analyzer')} className="bg-brand hover:scale-105 text-white px-8 py-4 rounded-2xl font-black shadow-xl transition-all flex items-center gap-3 glow-brand">
                   <Plus size={24}/> NOUVELLE ANALYSE
@@ -308,7 +362,7 @@ const App = () => {
                 <div className="glass p-8 rounded-3xl group hover:border-accent/30 transition-all border border-slate-200 dark:border-white/5">
                   <div className={`h-12 w-12 rounded-2xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-yellow-600 mb-6`}><Zap size={24} /></div>
                   <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Quota Restant</p>
-                  <p className="text-4xl font-black text-slate-900 dark:text-white mt-2 tracking-tighter">{Math.max(0, activePlan.maxCvs - history.length)}</p>
+                  <p className="text-4xl font-black text-slate-900 dark:text-white mt-2 tracking-tighter">{activePlan ? Math.max(0, activePlan.maxCvs - history.length) : 0}</p>
                 </div>
 
                 {/* Temps Gagné */}
@@ -345,8 +399,22 @@ const App = () => {
           )}
 
           {view === 'analyzer' && (
-             <div className="max-w-4xl mx-auto space-y-12 animate-fade-in">
-                <div className="glass p-12 rounded-[2.5rem] shadow-2xl space-y-10 border border-slate-200 dark:border-white/5">
+             <div className="max-w-4xl mx-auto space-y-12 animate-fade-in relative">
+                {!hasActivePlan && (
+                  <div className="absolute inset-0 z-30 glass rounded-[2.5rem] flex flex-col items-center justify-center p-12 text-center space-y-6">
+                    <div className="h-20 w-20 rounded-full bg-snRed/10 flex items-center justify-center text-snRed">
+                      <ShieldCheck size={48} />
+                    </div>
+                    <div className="space-y-2">
+                      <h2 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Accès Restreint</h2>
+                      <p className="text-slate-500 font-bold max-w-sm">Vous devez souscrire à un forfait CV SCREEN AI pour accéder à l'analyseur neuronal.</p>
+                    </div>
+                    <button onClick={() => setView('pricing')} className="bg-accent text-dark px-10 py-4 rounded-2xl font-black text-lg shadow-xl glow-teal hover:scale-105 transition-all">
+                      VOIR LES FORFAITS
+                    </button>
+                  </div>
+                )}
+                <div className={`glass p-12 rounded-[2.5rem] shadow-2xl space-y-10 border border-slate-200 dark:border-white/5 ${!hasActivePlan ? 'blur-sm pointer-events-none' : ''}`}>
                   <div className="flex flex-col md:flex-row justify-between items-start gap-6">
                     <div className="space-y-2">
                       <h2 className="text-4xl font-black text-slate-900 dark:text-white flex items-center gap-4 uppercase tracking-tighter"><Sparkles className="text-accent" /> ANALYSEUR IA</h2>
@@ -357,21 +425,61 @@ const App = () => {
                   {analyzerError && <div className="p-5 bg-red-400/10 border border-red-400/20 text-red-500 dark:text-red-400 rounded-2xl text-sm font-bold flex items-center gap-3"><AlertCircle size={20}/> {analyzerError}</div>}
                   
                   <input type="file" ref={fileInputRef} onChange={handleFileUpload} multiple className="hidden" />
-                  <div onClick={() => !quotaReached && fileInputRef.current?.click()} className={`border-2 border-dashed border-slate-200 dark:border-white/10 p-20 rounded-[2.5rem] text-center transition-all ${quotaReached ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer hover:bg-accent/5 hover:border-accent/50 group'}`}>
-                      <Upload className="mx-auto mb-6 text-accent/30 group-hover:text-accent transition-colors" size={64} />
+                  <div onClick={() => !quotaReached && !isImporting && fileInputRef.current?.click()} className={`border-2 border-dashed border-slate-200 dark:border-white/10 p-20 rounded-[2.5rem] text-center transition-all ${quotaReached || isImporting ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer hover:bg-accent/5 hover:border-accent/50 group'}`}>
+                      {isImporting ? (
+                        <Loader2 className="mx-auto mb-6 text-accent animate-spin" size={64} />
+                      ) : (
+                        <Upload className="mx-auto mb-6 text-accent/30 group-hover:text-accent transition-colors" size={64} />
+                      )}
                       <p className="text-2xl font-black text-slate-800 dark:text-white mb-2 uppercase tracking-widest">
-                        {pendingFiles.length > 0 ? `${pendingFiles.length} CV DÉTECTÉS` : "IMPORTER DES CV"}
+                        {isImporting ? "LECTURE DES FICHIERS..." : pendingFiles.length > 0 ? `${pendingFiles.length} CV DÉTECTÉS` : "IMPORTER DES CV"}
                       </p>
                       <p className="text-slate-500 font-bold text-xs uppercase">PDF, Word, Images, Text</p>
                   </div>
 
                   <textarea value={inputText} onChange={e => { setInputText(e.target.value); if (e.target.value) setPendingFiles([]); }} disabled={quotaReached} placeholder="Ou collez le texte ici pour une analyse instantanée..." className="w-full h-44 p-8 glass rounded-2xl outline-none focus:ring-4 focus:ring-accent/20 text-slate-800 dark:text-slate-300 font-medium text-lg border border-slate-200 dark:border-white/5" />
                   
-                  <button onClick={handleAnalyze} disabled={isAnalyzing || quotaReached} className="w-full bg-accent hover:bg-teal-400 text-dark py-6 rounded-2xl font-black text-2xl shadow-2xl glow-teal disabled:opacity-30 transition-all hover:scale-[1.02] active:scale-[0.98]">
+                  <button onClick={handleAnalyze} disabled={isAnalyzing || quotaReached || isImporting || (pendingFiles.length === 0 && !inputText.trim())} className="w-full bg-accent hover:bg-teal-400 text-dark py-6 rounded-2xl font-black text-2xl shadow-2xl glow-teal disabled:opacity-30 transition-all hover:scale-[1.02] active:scale-[0.98]">
                     LANCER LE SCORING
                   </button>
                 </div>
-                {currentResult && <AnalysisCard result={currentResult} />}
+
+                {batchResults.length > 1 && (
+                  <div className="space-y-6 animate-fade-in">
+                    <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-widest flex items-center gap-3">
+                      <LayoutDashboard className="text-accent" /> CLASSEMENT DE LA SESSION ({batchResults.length})
+                    </h3>
+                    <div className="grid grid-cols-1 gap-4">
+                      {batchResults.map((res, idx) => (
+                        <div 
+                          key={res.id || idx} 
+                          onClick={() => setCurrentResult(res)}
+                          className={`glass p-6 rounded-2xl flex items-center justify-between cursor-pointer transition-all border ${currentResult?.id === res.id ? 'border-accent bg-accent/5 glow-teal' : 'border-slate-200 dark:border-white/5 hover:bg-slate-100 dark:hover:bg-white/5'}`}
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className={`h-10 w-10 rounded-xl flex items-center justify-center font-black ${idx === 0 ? 'bg-yellow-500 text-white' : idx === 1 ? 'bg-slate-300 text-slate-700' : idx === 2 ? 'bg-orange-400 text-white' : 'bg-slate-100 dark:bg-white/10 text-slate-500'}`}>
+                              {idx + 1}
+                            </div>
+                            <div>
+                              <p className="font-bold text-slate-800 dark:text-white">{res.candidateName}</p>
+                              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{res.totalExperience}</p>
+                            </div>
+                          </div>
+                          <div className={`px-4 py-1.5 rounded-xl font-black ${res.score >= 8 ? 'text-accent bg-accent/10' : res.score >= 6 ? 'text-yellow-600 bg-yellow-50' : 'text-red-500 bg-red-50'}`}>
+                            {res.score}/10
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {currentResult && (
+                  <div className="space-y-6 animate-fade-in">
+                    {batchResults.length > 1 && <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-widest">DÉTAILS DU CANDIDAT SÉLECTIONNÉ</h3>}
+                    <AnalysisCard result={currentResult} />
+                  </div>
+                )}
              </div>
           )}
 
@@ -385,7 +493,7 @@ const App = () => {
                   {PLANS.map(plan => (
                     <div key={plan.id} className={`glass rounded-[2.5rem] p-10 border-2 flex flex-col transition-all group ${currentPlanId === plan.id ? 'border-brand glow-brand scale-105 bg-brand/5' : 'border-slate-200 dark:border-white/5 hover:border-accent/30'}`}>
                        <h3 className="font-black text-2xl mb-2 text-slate-800 dark:text-white uppercase tracking-tight">{plan.name}</h3>
-                       <div className="mb-8"><span className="text-5xl font-black text-slate-900 dark:text-white">{plan.price}€</span><span className="text-slate-500 text-sm font-black ml-2 uppercase tracking-widest">/{plan.limit}</span></div>
+                       <div className="mb-8"><span className="text-5xl font-black text-slate-900 dark:text-white">{plan.price} FCFA</span><span className="text-slate-500 text-sm font-black ml-2 uppercase tracking-widest">/{plan.limit}</span></div>
                        <ul className="space-y-4 mb-12 flex-1">
                           {plan.features.map((f, i) => (<li key={i} className="flex items-start gap-3 text-xs font-bold text-slate-600 dark:text-slate-400"><Check size={18} className="text-accent shrink-0"/> {f}</li>))}
                        </ul>
@@ -411,7 +519,7 @@ const App = () => {
                     </button>
                   ))}
                </div>
-               <button onClick={() => { storageService.savePlanId(selectedPlan.id); setCurrentPlanId(selectedPlan.id); setView('dashboard'); setSelectedPlan(null); }} className="w-full bg-accent text-dark py-6 rounded-[1.5rem] font-black text-2xl flex items-center justify-center gap-4 glow-teal hover:scale-95 transition-all"><ShieldCheck size={28}/> PAYER {selectedPlan.price}€</button>
+               <button onClick={() => { storageService.savePlanId(selectedPlan.id); setCurrentPlanId(selectedPlan.id); setView('dashboard'); setSelectedPlan(null); }} className="w-full bg-accent text-dark py-6 rounded-[1.5rem] font-black text-2xl flex items-center justify-center gap-4 glow-teal hover:scale-95 transition-all"><ShieldCheck size={28}/> PAYER {selectedPlan.price} FCFA</button>
             </div>
           )}
 

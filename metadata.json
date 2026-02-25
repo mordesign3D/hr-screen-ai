@@ -1,5 +1,5 @@
 {
-  "name": "CV filtrage AI",
-  "description": "An automated resume screening and qualification tool using Gemini to score candidates against job descriptions.",
+  "name": "CV SCREEN AI",
+  "description": "Solution d'analyse et de qualification automatique de CV utilisant l'IA Gemini.",
   "requestFramePermissions": []
 }

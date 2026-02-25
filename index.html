@@ -4,7 +4,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>HR Screen AI - Qualification Automatisée</title>
+    <title>CV SCREEN AI - Qualification Automatisée</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cGF0aCBkPSJNIDUwIDEwIEMgMjggMTAgMTAgMjggMTAgNTAgQyAxMCA3MiAyOCA5MCA1MCA5MCIgc3Ryb2tlPSIjNGY0NmU1IiBzdHJva2Utd2lkdGg9IjYiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjxjaXJjbGUgY3g9IjU1IiBjeT0iNTUiIHI9IjI4IiBmaWxsPSJ3aGl0ZSIgc3Ryb2tlPSIjMGYxNzJhIiBzdHJva2Utd2lkdGg9IjYiLz48bGluZSB4MT0iNzYiIHkxPSI3NiIgeDI9IjkyIiB5Mj0iOTIiIHN0cm9rZT0iIzBmMTcyYSIgc3Ryb2tlLXdpZHRoPSI4IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48cmVjdCB4PSI0NCIgeT0iNDIiIHdpZHRoPSIyMiIgaGVpZ2h0PSIyOCIgcng9IjMiIGZpbGw9IiNmMWY1ZjkiIHN0cm9rZT0iIzk0YTNQOCIgc3Ryb2tlLXdpZHRoPSIyIi8+PHBhdGggZD0iTSA0OSA1NiBMIDUzIDYwIEwgNjEgNDgiIHN0cm9rZT0iIzEwYjk4MSIgc3Ryb2tlLXdpZHRoPSIzIiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48L3N2Zz4=" />
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -18,7 +18,7 @@
         color: #f8fafc;
       }
       body:not(.dark) {
-        background-color: #f3f4f6; /* Gris neutre clair */
+        background-color: #f8f9fa;
         color: #1f2937;
       }
       .glass {
@@ -34,11 +34,14 @@
         border: 1px solid rgba(0, 0, 0, 0.08);
         box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
       }
-      .glow-teal {
-        box-shadow: 0 0 25px rgba(20, 184, 166, 0.2);
+      .glow-sn-green {
+        box-shadow: 0 0 25px rgba(0, 133, 63, 0.2);
       }
-      .glow-brand {
-        box-shadow: 0 0 40px rgba(99, 102, 241, 0.15);
+      .glow-sn-yellow {
+        box-shadow: 0 0 25px rgba(253, 239, 66, 0.2);
+      }
+      .glow-sn-red {
+        box-shadow: 0 0 25px rgba(227, 27, 35, 0.2);
       }
       ::-webkit-scrollbar {
         width: 6px;
@@ -64,8 +67,10 @@
         theme: {
           extend: {
             colors: {
-              accent: '#14b8a6', // Teal
-              brand: '#6366f1', // Indigo
+              snGreen: '#00853f',
+              snYellow: '#fdef42',
+              snRed: '#e31b23',
+              accent: '#00853f', // Default accent to SN Green
               dark: '#030712',
               card: '#0f172a'
             },
