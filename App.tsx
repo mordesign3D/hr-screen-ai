@@ -4,7 +4,7 @@ import {
   FileText, Upload, Sparkles, AlertCircle, History, X, 
   Sun, Moon, CheckCircle2, Loader2, LayoutDashboard, CreditCard, User as UserIcon, LogOut, Menu, 
   Settings as SettingsIcon, Check, Plus, ShieldCheck, Zap, 
-  Clock, Euro, Save, Smartphone, Wallet, Cpu, ArrowLeft, ChevronRight
+  Clock, Euro, Save, Smartphone, Wallet, Cpu, ArrowLeft, ChevronRight, Mail
 } from 'lucide-react';
 // @ts-ignore
 import mammoth from 'mammoth';
@@ -13,6 +13,7 @@ import { analyzeCandidate, AnalysisInput } from './services/geminiService';
 import { storageService, UserProfile } from './services/storageService';
 import JobConfigForm from './components/JobConfigForm';
 import AnalysisCard from './components/AnalysisCard';
+import AuthView from './components/AuthView';
 
 // --- CONSTANTS ---
 const PLANS = [
@@ -46,14 +47,14 @@ const Logo = ({ className = "h-9 w-9" }: { className?: string }) => (
 const App = () => {
   // Global States
   const [isLoading, setIsLoading] = useState(true);
-  const [view, setView] = useState<'dashboard' | 'analyzer' | 'history' | 'settings' | 'pricing' | 'payment' | 'subscription' | 'account'>('dashboard');
+  const [view, setView] = useState<'auth' | 'dashboard' | 'analyzer' | 'history' | 'settings' | 'pricing' | 'payment' | 'subscription' | 'account'>('auth');
   const [darkMode, setDarkMode] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
   // Data States
   const [jobProfile, setJobProfile] = useState<JobProfile>(() => storageService.getJobProfile());
   const [history, setHistory] = useState<AnalysisHistoryItem[]>([]);
-  const [userProfile, setUserProfile] = useState<UserProfile>(() => storageService.getUser());
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(() => storageService.getUser());
   const [currentPlanId, setCurrentPlanId] = useState<number>(() => storageService.getPlanId());
   
   // Analyzer States
@@ -75,6 +76,11 @@ const App = () => {
 
   // Effects
   useEffect(() => {
+    if (storageService.isAuthenticated()) {
+      setView('dashboard');
+    } else {
+      setView('auth');
+    }
     const timer = setTimeout(() => setIsLoading(false), 2000);
     return () => clearTimeout(timer);
   }, []);
@@ -241,6 +247,12 @@ const App = () => {
   const quotaReached = activePlan ? history.length >= activePlan.maxCvs : true;
   const hasActivePlan = !!activePlan;
 
+  const handleLogout = () => {
+    storageService.logout();
+    setUserProfile(null);
+    setView('auth');
+  };
+
   if (isLoading) return (
     <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-dark overflow-hidden transition-colors duration-500">
       <div className="relative mb-12 animate-float">
@@ -265,12 +277,33 @@ const App = () => {
 
   return (
     <div className={`min-h-screen flex font-sans transition-colors duration-300 ${darkMode ? 'dark bg-dark text-slate-200' : 'bg-slate-50 text-slate-800'}`}>
+      {/* SIDEBAR BACKDROP (Mobile) */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden animate-fade-in"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* SIDEBAR */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-64 glass border-r border-slate-200 dark:border-white/5 transform transition-transform lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="p-8 border-b border-slate-200 dark:border-white/5 flex items-center gap-3">
-          <Logo /> <span className="font-black text-slate-800 dark:text-white text-xl tracking-tighter uppercase">CV SCREEN AI</span>
+        <div className="p-8 border-b border-slate-200 dark:border-white/5 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Logo /> <span className="font-black text-slate-800 dark:text-white text-xl tracking-tighter uppercase">CV SCREEN AI</span>
+          </div>
+          <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
+            <X size={20} />
+          </button>
         </div>
         <nav className="p-6 space-y-2">
+          <div className="lg:hidden mb-6">
+            <button 
+              onClick={() => setSidebarOpen(false)} 
+              className="w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl text-sm font-black uppercase tracking-widest bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/10 transition-all"
+            >
+              <ArrowLeft size={18} /> Retour
+            </button>
+          </div>
           <SidebarItem icon={LayoutDashboard} label="Tableau de bord" targetView="dashboard" active={view === 'dashboard'} />
           <SidebarItem icon={Sparkles} label="Analyseur CV" targetView="analyzer" active={view === 'analyzer'} />
           <SidebarItem icon={History} label="Historique" targetView="history" active={view === 'history'} />
@@ -279,7 +312,7 @@ const App = () => {
           <SidebarItem icon={UserIcon} label="Profil" targetView="account" active={view === 'account'} />
         </nav>
         <div className="absolute bottom-6 w-full px-6">
-           <button onClick={() => {}} className="w-full flex items-center gap-4 px-4 py-3.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-2xl text-sm font-bold transition-all">
+           <button onClick={handleLogout} className="w-full flex items-center gap-4 px-4 py-3.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-2xl text-sm font-bold transition-all">
              <LogOut size={20} /> Déconnexion
            </button>
         </div>
@@ -318,6 +351,15 @@ const App = () => {
                 </div>
               </div>
             </div>
+          )}
+
+          {view === 'auth' && (
+            <AuthView 
+              onSuccess={(user) => {
+                setUserProfile(user);
+                setView('dashboard');
+              }} 
+            />
           )}
 
           {view === 'dashboard' && (
@@ -447,29 +489,59 @@ const App = () => {
                 {batchResults.length > 1 && (
                   <div className="space-y-6 animate-fade-in">
                     <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-widest flex items-center gap-3">
-                      <LayoutDashboard className="text-accent" /> CLASSEMENT DE LA SESSION ({batchResults.length})
+                      <LayoutDashboard className="text-accent" /> COMPARATIF DES CANDIDATS ({batchResults.length})
                     </h3>
-                    <div className="grid grid-cols-1 gap-4">
-                      {batchResults.map((res, idx) => (
-                        <div 
-                          key={res.id || idx} 
-                          onClick={() => setCurrentResult(res)}
-                          className={`glass p-6 rounded-2xl flex items-center justify-between cursor-pointer transition-all border ${currentResult?.id === res.id ? 'border-accent bg-accent/5 glow-teal' : 'border-slate-200 dark:border-white/5 hover:bg-slate-100 dark:hover:bg-white/5'}`}
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className={`h-10 w-10 rounded-xl flex items-center justify-center font-black ${idx === 0 ? 'bg-yellow-500 text-white' : idx === 1 ? 'bg-slate-300 text-slate-700' : idx === 2 ? 'bg-orange-400 text-white' : 'bg-slate-100 dark:bg-white/10 text-slate-500'}`}>
-                              {idx + 1}
-                            </div>
-                            <div>
-                              <p className="font-bold text-slate-800 dark:text-white">{res.candidateName}</p>
-                              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{res.totalExperience}</p>
-                            </div>
-                          </div>
-                          <div className={`px-4 py-1.5 rounded-xl font-black ${res.score >= 8 ? 'text-accent bg-accent/10' : res.score >= 6 ? 'text-yellow-600 bg-yellow-50' : 'text-red-500 bg-red-50'}`}>
-                            {res.score}/10
-                          </div>
-                        </div>
-                      ))}
+                    <div className="glass rounded-[2rem] overflow-hidden border border-slate-200 dark:border-white/5 shadow-xl">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="bg-slate-50/50 dark:bg-white/5 border-b border-slate-200 dark:border-white/5">
+                              <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Rang</th>
+                              <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Candidat</th>
+                              <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Score Global</th>
+                              <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Technique</th>
+                              <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Potentiel</th>
+                              <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Stabilité</th>
+                              <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Expérience</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                            {batchResults.map((res, idx) => (
+                              <tr 
+                                key={res.id || idx} 
+                                onClick={() => setCurrentResult(res)}
+                                className={`group cursor-pointer transition-all hover:bg-accent/5 ${currentResult?.id === res.id ? 'bg-accent/10' : ''}`}
+                              >
+                                <td className="px-6 py-5">
+                                  <div className={`h-8 w-8 rounded-lg flex items-center justify-center font-black text-xs ${idx === 0 ? 'bg-yellow-500 text-white shadow-lg shadow-yellow-500/20' : idx === 1 ? 'bg-slate-300 text-slate-700' : idx === 2 ? 'bg-orange-400 text-white' : 'bg-slate-100 dark:bg-white/10 text-slate-500'}`}>
+                                    {idx + 1}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-5">
+                                  <p className="font-bold text-slate-800 dark:text-white group-hover:text-accent transition-colors">{res.candidateName}</p>
+                                </td>
+                                <td className="px-6 py-5 text-center">
+                                  <span className={`inline-block px-3 py-1 rounded-full font-black text-sm ${res.score >= 8 ? 'text-accent bg-accent/10' : res.score >= 6 ? 'text-yellow-600 bg-yellow-50' : 'text-red-500 bg-red-50'}`}>
+                                    {res.score}/10
+                                  </span>
+                                </td>
+                                <td className="px-6 py-5 text-center">
+                                  <span className="text-sm font-bold text-slate-600 dark:text-slate-400">{res.technicalScore}/10</span>
+                                </td>
+                                <td className="px-6 py-5 text-center">
+                                  <span className="text-sm font-bold text-slate-600 dark:text-slate-400">{res.potentialScore}/10</span>
+                                </td>
+                                <td className="px-6 py-5 text-center">
+                                  <span className="text-sm font-bold text-slate-600 dark:text-slate-400">{res.stabilityScore}/10</span>
+                                </td>
+                                <td className="px-6 py-5">
+                                  <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest bg-slate-100 dark:bg-white/5 px-2 py-1 rounded-md">{res.totalExperience}</span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -523,15 +595,29 @@ const App = () => {
             </div>
           )}
 
-          {view === 'account' && (
+          {view === 'account' && userProfile && (
             <div className="max-w-4xl mx-auto space-y-12 animate-fade-in">
                <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Profil Analyste</h1>
                <div className="glass p-12 rounded-[3rem] space-y-10 border border-slate-200 dark:border-white/5">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                      <div className="space-y-4"><label className="text-xs font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest">Identité</label><input type="text" value={userProfile.name} onChange={e => setUserProfile({...userProfile, name: e.target.value})} className="w-full p-5 bg-slate-50 dark:bg-dark border border-slate-200 dark:border-slate-800 rounded-2xl text-slate-900 dark:text-white outline-none focus:ring-4 focus:ring-accent/20 font-medium text-lg" /></div>
-                     <div className="space-y-4"><label className="text-xs font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest">Organisation</label><input type="text" value={userProfile.company} onChange={e => setUserProfile({...userProfile, company: e.target.value})} className="w-full p-5 bg-slate-50 dark:bg-dark border border-slate-200 dark:border-slate-800 rounded-2xl text-slate-900 dark:text-white outline-none focus:ring-4 focus:ring-accent/20 font-medium text-lg" /></div>
+                     <div className="space-y-4"><label className="text-xs font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest">Email</label><input type="text" value={userProfile.email} disabled className="w-full p-5 bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-2xl text-slate-500 outline-none font-medium text-lg cursor-not-allowed" /></div>
                   </div>
                   <button onClick={() => storageService.updateUser(userProfile)} className="bg-brand text-white px-12 py-5 rounded-[1.5rem] font-black hover:scale-105 transition-all flex items-center gap-4 shadow-2xl text-lg"><Save size={24}/> SAUVEGARDER LES MODIFICATIONS</button>
+               </div>
+
+               <div className="glass p-12 rounded-[3rem] border border-slate-200 dark:border-white/5 space-y-6">
+                  <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Support Technique</h3>
+                  <p className="text-slate-500 font-bold">Besoin d'aide ou d'une assistance personnalisée ? Contactez notre équipe d'experts.</p>
+                  <div className="flex items-center gap-4 p-6 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/5">
+                    <div className="h-12 w-12 bg-accent/10 rounded-xl flex items-center justify-center text-accent">
+                      <Mail size={24} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Email de l'équipe HR</p>
+                      <p className="text-lg font-black text-slate-800 dark:text-white">nainguemame@gmail.com</p>
+                    </div>
+                  </div>
                </div>
             </div>
           )}

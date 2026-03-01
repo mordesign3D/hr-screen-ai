@@ -1,5 +1,7 @@
 import { JobProfile } from "./types";
 
+export const TEAM_EMAIL = "nainguemame@gmail.com";
+
 export const DEFAULT_JOB_PROFILE: JobProfile = {
   title: "Développeur Full-Stack",
   minExperience: 3,

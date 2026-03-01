@@ -25,12 +25,20 @@ const DEFAULT_USER: UserProfile = {
 export const storageService = {
   isCloudSyncActive: () => false,
 
-  // Always true now that login is removed
-  isAuthenticated: (): boolean => true,
+  // Authentication
+  isAuthenticated: (): boolean => {
+    return !!localStorage.getItem(KEYS.USER);
+  },
 
-  getUser: (): UserProfile => {
+  logout: () => {
+    localStorage.removeItem(KEYS.USER);
+    localStorage.removeItem(KEYS.PLAN);
+    localStorage.removeItem(KEYS.LOCAL_HISTORY);
+  },
+
+  getUser: (): UserProfile | null => {
     const data = localStorage.getItem(KEYS.USER);
-    return data ? JSON.parse(data) : DEFAULT_USER;
+    return data ? JSON.parse(data) : null;
   },
 
   updateUser: (user: UserProfile) => {
@@ -47,16 +55,42 @@ export const storageService = {
   },
 
   saveAnalysis: async (result: AnalysisResult): Promise<string> => {
+    const user = storageService.getUser();
+    if (user) {
+      try {
+        const response = await fetch('/api/history', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: user.email, result }),
+        });
+        const data = await response.json();
+        if (data.success) return data.id;
+      } catch (error) {
+        console.error("Error saving to server:", error);
+      }
+    }
+
+    // Fallback to local storage
     const timestamp = Date.now();
     const history = await storageService.getHistory();
     const id = timestamp.toString();
     const newItem = { ...result, id, timestamp };
-    
     localStorage.setItem(KEYS.LOCAL_HISTORY, JSON.stringify([newItem, ...history]));
     return id;
   },
 
   getHistory: async (): Promise<AnalysisHistoryItem[]> => {
+    const user = storageService.getUser();
+    if (user) {
+      try {
+        const response = await fetch(`/api/history/${user.email}`);
+        const data = await response.json();
+        if (data.success) return data.history;
+      } catch (error) {
+        console.error("Error fetching from server:", error);
+      }
+    }
+
     const data = localStorage.getItem(KEYS.LOCAL_HISTORY);
     return data ? JSON.parse(data) : [];
   },
