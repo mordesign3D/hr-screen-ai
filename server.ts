@@ -2,6 +2,7 @@
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import { Resend } from 'resend';
+import { GoogleGenAI } from "@google/genai";
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -21,6 +22,7 @@ app.use(express.json({ limit: '10mb' }));
 
 // Services
 const resend = new Resend(process.env.RESEND_API_KEY);
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || process.env.API_KEY });
 const TEAM_EMAIL = "nainguemame@gmail.com";
 
 // --- AUTH API ---
@@ -45,23 +47,55 @@ app.post('/api/auth/signup', async (req, res) => {
   db.saveUser({ name, email, password, verified: false, code });
 
   try {
+    // Generate a personalized welcome message using Gemini
+    let welcomeMessage = "Merci d'utiliser CV SCREEN AI.";
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: `Génère une phrase d'accueil courte (max 15 mots) et motivante pour un nouvel utilisateur nommé ${name} qui vient de s'inscrire sur HR Screen AI, une plateforme d'analyse de CV par intelligence artificielle.`,
+      });
+      if (response.text) {
+        welcomeMessage = response.text.trim();
+      }
+    } catch (aiError) {
+      console.error("Gemini Error:", aiError);
+    }
+
     // Send verification email
     const { data, error } = await resend.emails.send({
-      from: 'CV SCREEN AI <onboarding@resend.dev>',
+      from: 'HR Screen AI <onboarding@resend.dev>',
       to: [email],
-      subject: 'Votre code de validation - CV SCREEN AI',
+      subject: 'Votre code de vérification HR Screen AI',
       html: `
-        <div style="font-family: sans-serif; padding: 40px; color: #334155; background-color: #f8fafc;">
-          <div style="max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-            <h2 style="color: #4f46e5; text-align: center; font-size: 24px;">Validation de votre compte</h2>
-            <p>Bonjour <strong>${name}</strong>,</p>
-            <p>Merci d'utiliser CV SCREEN AI. Voici votre code de validation sécurisé à 6 chiffres :</p>
-            <div style="background: #eef2ff; padding: 30px; border-radius: 16px; text-align: center; font-size: 42px; font-weight: 900; letter-spacing: 8px; color: #4338ca; margin: 30px 0; border: 2px dashed #c7d2fe;">
-              ${code}
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #1e293b; background-color: #f1f5f9;">
+          <div style="max-width: 500px; margin: 0 auto; background: white; padding: 40px; border-radius: 24px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <h1 style="color: #4f46e5; font-size: 28px; font-weight: 800; margin: 0; letter-spacing: -1px;">HR SCREEN AI</h1>
+              <p style="color: #64748b; font-size: 14px; font-weight: 600; text-transform: uppercase; tracking: 2px; margin-top: 5px;">Recrutement Intelligent</p>
             </div>
-            <p style="font-size: 14px; color: #64748b; text-align: center;">Ce code est requis pour activer votre compte.</p>
-            <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 30px 0;" />
-            <p style="font-size: 12px; color: #94a3b8; text-align: center;">L'équipe HR CV SCREEN (${TEAM_EMAIL})</p>
+            
+            <h2 style="color: #0f172a; font-size: 20px; font-weight: 700; margin-bottom: 15px;">Bienvenue, ${name} !</h2>
+            <p style="font-size: 16px; line-height: 1.6; color: #475569; margin-bottom: 25px;">
+              ${welcomeMessage}
+            </p>
+            
+            <div style="background: #f8fafc; border: 2px solid #e2e8f0; padding: 30px; border-radius: 20px; text-align: center; margin: 30px 0;">
+              <p style="font-size: 12px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">Votre code de vérification</p>
+              <div style="font-size: 48px; font-weight: 900; letter-spacing: 10px; color: #4f46e5;">
+                ${code}
+              </div>
+            </div>
+            
+            <p style="font-size: 14px; color: #64748b; text-align: center; margin-bottom: 30px;">
+              Ce code est requis pour activer votre compte. Il expirera dans 10 minutes.
+            </p>
+            
+            <div style="border-top: 1px solid #e2e8f0; padding-top: 25px; text-align: center;">
+              <p style="font-size: 12px; color: #94a3b8; margin: 0;">
+                L'équipe HR CV SCREEN<br/>
+                <a href="mailto:${TEAM_EMAIL}" style="color: #4f46e5; text-decoration: none; font-weight: 600;">${TEAM_EMAIL}</a>
+              </p>
+            </div>
           </div>
         </div>
       `,
