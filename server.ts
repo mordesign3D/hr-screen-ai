@@ -7,7 +7,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-import { db } from './services/database.js';
+import { db } from './services/database';
 
 dotenv.config();
 
@@ -20,9 +20,37 @@ const PORT = 3000;
 // Middleware
 app.use(express.json({ limit: '10mb' }));
 
+// Health check
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 // Services
-const resend = new Resend(process.env.RESEND_API_KEY);
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || process.env.API_KEY });
+let resendClient: Resend | null = null;
+let aiClient: GoogleGenAI | null = null;
+
+function getResend() {
+  if (!resendClient) {
+    const key = process.env.RESEND_API_KEY;
+    if (!key) {
+      console.warn("⚠️ RESEND_API_KEY is missing. Email sending will be simulated.");
+    }
+    resendClient = new Resend(key || 'dummy_key');
+  }
+  return resendClient;
+}
+
+function getAI() {
+  if (!aiClient) {
+    const key = process.env.GEMINI_API_KEY || process.env.API_KEY;
+    if (!key) {
+      console.warn("⚠️ GEMINI_API_KEY is missing. AI features will be limited.");
+    }
+    aiClient = new GoogleGenAI({ apiKey: key || 'dummy_key' });
+  }
+  return aiClient;
+}
+
 const TEAM_EMAIL = "nainguemame@gmail.com";
 
 // --- AUTH API ---
@@ -50,6 +78,7 @@ app.post('/api/auth/signup', async (req, res) => {
     // Generate a personalized welcome message using Gemini
     let welcomeMessage = "Merci d'utiliser CV SCREEN AI.";
     try {
+      const ai = getAI();
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: `Génère une phrase d'accueil courte (max 15 mots) et motivante pour un nouvel utilisateur nommé ${name} qui vient de s'inscrire sur HR Screen AI, une plateforme d'analyse de CV par intelligence artificielle.`,
@@ -62,6 +91,7 @@ app.post('/api/auth/signup', async (req, res) => {
     }
 
     // Send verification email
+    const resend = getResend();
     const { data, error } = await resend.emails.send({
       from: 'HR Screen AI <onboarding@resend.dev>',
       to: [email],
