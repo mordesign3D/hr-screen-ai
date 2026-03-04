@@ -7,14 +7,24 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-import { db } from './services/database.js';
+import { db } from './services/database.ts';
 
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Global error handling
+process.on('uncaughtException', (err) => {
+  console.error('❌ Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 const app = express();
+console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
 const PORT = 3000;
 
 // Middleware

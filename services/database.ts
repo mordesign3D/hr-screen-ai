@@ -59,6 +59,7 @@ class Database {
         const content = fs.readFileSync(DB_PATH, 'utf-8');
         this.data = JSON.parse(content);
         if (!this.data.history) this.data.history = [];
+        console.log(`🗄️ Database loaded from: ${DB_PATH}`);
       } catch (error) {
         console.error("Error reading database:", error);
         this.data = { users: {}, history: [] };
