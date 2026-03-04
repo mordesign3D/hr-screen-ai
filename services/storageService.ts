@@ -12,7 +12,7 @@ const KEYS = {
 export interface UserProfile {
   name: string;
   email: string;
-  company: string;
+  company?: string;
   phone?: string;
 }
 

@@ -6,8 +6,8 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const DB_PATH = path.join(__dirname, '../../data/db.json');
-const DATA_DIR = path.join(__dirname, '../../data');
+const DATA_DIR = path.resolve(process.cwd(), 'data');
+const DB_PATH = path.resolve(DATA_DIR, 'db.json');
 
 interface User {
   name: string;

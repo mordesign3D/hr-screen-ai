@@ -7,7 +7,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-import { db } from './services/database';
+import { db } from './services/database.js';
 
 dotenv.config();
 
@@ -58,13 +58,16 @@ const TEAM_EMAIL = "nainguemame@gmail.com";
 // Signup
 app.post('/api/auth/signup', async (req, res) => {
   const { email, name, password } = req.body;
+  console.log(`📝 Signup attempt: ${email}`);
   
   if (!email || !name || !password) {
     return res.status(400).json({ error: "Champs manquants" });
   }
 
   // Check if user exists
-  if (db.getUser(email)) {
+  const existingUser = db.getUser(email);
+  if (existingUser) {
+    console.log(`⚠️ User already exists: ${email}`);
     return res.status(400).json({ error: "Cet email est déjà utilisé" });
   }
 
@@ -73,6 +76,7 @@ app.post('/api/auth/signup', async (req, res) => {
 
   // Save pending user
   db.saveUser({ name, email, password, verified: false, code });
+  console.log(`✅ User saved to DB (unverified): ${email}`);
 
   try {
     // Generate a personalized welcome message using Gemini
@@ -87,7 +91,7 @@ app.post('/api/auth/signup', async (req, res) => {
         welcomeMessage = response.text.trim();
       }
     } catch (aiError) {
-      console.error("Gemini Error:", aiError);
+      console.error("❌ Gemini Error:", aiError);
     }
 
     // Send verification email
@@ -132,15 +136,14 @@ app.post('/api/auth/signup', async (req, res) => {
     });
 
     if (error) {
-      console.error("Resend Error:", error);
-      // For demo purposes, if Resend fails (e.g. no API key), we still return the code in the response
-      // so the user can continue the flow in the preview.
+      console.error("❌ Resend Error:", error);
       return res.json({ success: true, message: "Code envoyé (simulé)", debugCode: code });
     }
 
+    console.log(`📧 Verification email sent to: ${email}`);
     res.json({ success: true, message: "Code envoyé par email" });
   } catch (error) {
-    console.error("Signup Error:", error);
+    console.error("❌ Signup Error:", error);
     res.status(500).json({ error: "Erreur interne" });
   }
 });
@@ -148,14 +151,20 @@ app.post('/api/auth/signup', async (req, res) => {
 // Verify Code
 app.post('/api/auth/verify', (req, res) => {
   const { email, code } = req.body;
+  console.log(`🔐 Verification attempt for: ${email} with code: ${code}`);
   const user = db.getUser(email);
 
-  if (!user) return res.status(404).json({ error: "Utilisateur non trouvé" });
+  if (!user) {
+    console.log(`⚠️ User not found for verification: ${email}`);
+    return res.status(404).json({ error: "Utilisateur non trouvé" });
+  }
   
   if (user.code === code) {
     db.updateUser(email, { verified: true, code: undefined });
+    console.log(`✅ User verified: ${email}`);
     res.json({ success: true, user: { name: user.name, email: user.email } });
   } else {
+    console.log(`❌ Invalid code for: ${email}`);
     res.status(400).json({ error: "Code invalide" });
   }
 });
@@ -163,20 +172,25 @@ app.post('/api/auth/verify', (req, res) => {
 // Login
 app.post('/api/auth/login', (req, res) => {
   const { email, password } = req.body;
+  console.log(`🔑 Login attempt: ${email}`);
   const user = db.getUser(email);
 
   if (!user) {
+    console.log(`⚠️ Login failed: User not found: ${email}`);
     return res.status(401).json({ error: "Cet utilisateur n'existe pas" });
   }
 
   if (user.password !== password) {
+    console.log(`❌ Login failed: Incorrect password for: ${email}`);
     return res.status(401).json({ error: "Mot de passe incorrect" });
   }
 
   if (!user.verified) {
+    console.log(`⚠️ Login failed: User not verified: ${email}`);
     return res.status(403).json({ error: "Compte non vérifié", unverified: true });
   }
 
+  console.log(`✅ Login successful: ${email}`);
   res.json({ success: true, user: { name: user.name, email: user.email } });
 });
 

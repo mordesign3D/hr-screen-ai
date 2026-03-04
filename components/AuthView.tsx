@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Mail, Lock, User, ShieldCheck, Loader2, AlertCircle, ArrowRight, CheckCircle2 } from 'lucide-react';
-import { UserProfile } from '../services/storageService';
+import { storageService, UserProfile } from '../services/storageService';
 
 interface AuthViewProps {
   onSuccess: (user: UserProfile) => void;
@@ -81,7 +81,7 @@ const AuthView: React.FC<AuthViewProps> = ({ onSuccess }) => {
 
       const data = await response.json();
       if (data.success) {
-        localStorage.setItem('hr_app_user', JSON.stringify(data.user));
+        storageService.updateUser(data.user);
         onSuccess(data.user);
       } else {
         setError(data.error || "Code invalide");
@@ -118,7 +118,7 @@ const AuthView: React.FC<AuthViewProps> = ({ onSuccess }) => {
 
       const data = await response.json();
       if (data.success) {
-        localStorage.setItem('hr_app_user', JSON.stringify(data.user));
+        storageService.updateUser(data.user);
         onSuccess(data.user);
       } else if (data.unverified) {
         setMode('verify');
